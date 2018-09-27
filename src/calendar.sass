@@ -1,0 +1,323 @@
+.travel-calendar 
+    overflow: hidden
+    flex-wrap: wrap
+    flex-direction: column
+    font-family: Gilroy
+    z-index: 9999
+    box-shadow: 0 0 3px rgba(0, 0, 0, 0.1), 0 2px 3px rgba(0, 0, 0, 0.15)
+
+    &.center-align
+      .travel-calendar__input-container
+        display: flex
+        justify-content: center
+
+    &.right-align
+      .travel-calendar__input-container
+        display: flex
+        justify-content: flex-end
+
+
+    .week-days
+      display: none
+
+    @media (max-width: 767px)
+      height: 0
+      transform: translateY(100%)
+      transition: transform 0.3s linear
+
+    @media (min-width: 768px) and (max-width: 1024px)
+      background: rgba(60, 60, 60, 0.8)
+      display: none
+      justify-content: center
+      align-items: center
+
+    @media (min-width: 1025px)
+      position: absolute
+      visibility: hidden
+      opacity: 0
+      right: auto
+      top: auto
+      transition: opacity 0.15s linear
+
+      &-days-of-week
+        display: none
+      &-month
+        margin: 0 20px
+      .week-days
+        display: flex
+
+        .travel-calendar-day
+          color: #f23d4e
+
+    &.visible
+      display: flex
+      position: fixed
+      overflow: auto
+      height: auto
+      right: 0
+      top: 0
+      left: 0
+      bottom: 0
+      transform: translateY(0)
+
+      @media (min-width: 1025px)
+        position: absolute
+        visibility: visible
+        opacity: 1
+        overflow: visible
+        left: 40px
+        bottom: auto
+        right: auto
+
+    &__input
+      height: 40px
+      margin: 8px
+      border: 2px solid #0088DC
+
+
+    &__container
+      display: flex
+      flex-wrap: wrap
+      flex-direction: column
+      background: #fff
+      position: relative
+      height: 100%
+
+      @media (min-width: 768px) and (max-width: 1024px)
+        width: 360px
+        border-radius: 3px
+        height: 56%
+        min-height: 550px
+
+      @media (min-width: 1025px)
+        border: 1px solid #eee
+        border-radius: 2px
+        
+    *
+      box-sizing: border-box
+
+    &__header
+      width: 100%
+      border-bottom: 1px solid #eee
+
+      @media (max-width: 1024px)
+        background: #0088DC
+
+    &__footer
+      width: 100%
+      border-top: 1px solid #eee
+      justify-content: flex-end
+      display: flex
+      padding: 10px 20px
+
+    &__btn
+      line-height: 32px
+      padding: 0 15px
+      min-width: 100px
+      margin-left: 20px
+
+    &__arrow
+      position: absolute
+      z-index: 3
+      top: 50%
+      transform: translateY(-50%)
+      height: 40px
+      width: 40px
+      background-color: #fff
+      border-radius: 100%
+      box-shadow: 0 0 3px rgba(0, 0, 0, 0.1), 0 2px 3px rgba(0, 0, 0, 0.15)
+      font-size: 30px
+      text-align: center
+      cursor: pointer
+      @media (max-width: 1024px)
+        display: none
+
+      &.disabled
+        cursor: not-available
+        background: #f7f7f7
+        color: #bbb
+
+      &.arrow-right
+        right: -20px
+
+      &.arrow-left
+        left: -20px
+
+    &-days-of-week
+      background: #ddd
+
+      .travel-calendar-day 
+        border-color: #ddd
+
+    &-monthes
+      display: flex
+      width: 100%
+      height: 100%
+      flex-wrap: wrap
+      padding: 0 10px
+      scroll-behavior: smooth
+      transition: transform 0.3s linear
+
+      @media (min-width: 1025px)
+        flex-direction: row
+        flex-wrap: nowrap
+        overflow: visible
+
+    &-monthes-wrapper
+      display: flex
+      flex-grow: 1
+      width: 100%
+      height: 70%
+      flex-wrap: wrap
+      overflow-y: auto
+      overflow-x: hidden
+      scroll-behavior: smooth
+
+      @media (min-width: 1025px)
+        display: block
+        width: 730px
+        overflow: hidden
+
+    &-month
+      min-width: 220px
+      width: 100%
+
+      @media (min-width: 1025px)
+        min-width: 320px
+
+      &:last-child
+        padding-bottom: 20px
+
+    &-week
+        display: flex
+        flex-wrap: wrap
+        width: 100%
+
+    &-day
+        position: relative
+        cursor: pointer
+        width: 14.285%
+        height: 44px
+        line-height: 44px
+        text-align: center
+        box-sizing: border-box
+        border: 1px solid #fff
+
+        &.disabled
+          cursor: not-allowed
+          color: #bbb
+
+        @media (min-width: 1025px)
+          width: 45px
+          height: 45px
+        
+        &:not(.disabled)
+          &:hover
+            &.selected.utmost span
+              background: #fff
+              color: #000
+            span
+              background: #fff
+              &:before
+                content: ''
+                position: absolute
+                border-radius: 100%
+                border: 1px solid #0088DC
+                bottom: 0
+                left: 0
+                height: initial
+                right: 0
+                top: 0
+                transform: scale(1)
+                width: initial
+
+        span
+          position: relative
+          z-index: 2
+          height: 40px
+          width: 40px
+          line-height: 40px
+          border-radius: 100%
+          display: inline-block
+
+          @media (min-width: 768px)
+            width: 90%
+            height: 90%
+
+        &.selected
+          background: #e8f0fe
+          position: relative
+          transition: background-color 100ms cubic-bezier(0.4, 0.0, 0.2, 1) 0ms
+
+          .blured-element
+            width: 20px
+            height: 100%
+            position: absolute
+            top: 0
+            bottom: 0
+
+            &__start
+              background: linear-gradient(to right, #fff, #e8f0fe)
+              left: -10px
+
+            &__end
+              background: linear-gradient(to left, #fff, #e8f0fe)
+              right: -10px
+
+          &.utmost .blured-element
+              display: none
+
+          &.utmost
+            background: none
+            span
+              background: #0088DC
+              color: #fff
+              
+          &.utmost-right
+            background: linear-gradient(to right, #fff, #e8f0fe)
+              
+          &.utmost-left
+            background: linear-gradient(to left, #fff, #e8f0fe)
+        
+        &.available
+          background: rgba(0, 128, 0, 0.27)
+
+          &.utmost
+            background: rgba(0, 128, 0, 0.27)
+
+          &.selected
+            font-weight: bold
+            color: #008200
+
+        &.not-available
+          background: rgba(255, 0, 0, 0.3)
+
+          &.utmost
+            background: rgba(255, 0, 0, 0.3)
+
+          &.selected
+            font-weight: bold
+            color: #f23d4e
+
+        &.no-info
+          background: #B6B8B9
+          
+          &.utmost
+            background: #B6B8B9
+
+          &.selected
+            font-weight: bold
+
+        
+    
+    .month-name
+      margin-top: 20px
+      margin-bottom: 0
+
+      @media (min-width: 1025px)
+        text-align: center
+
+
+
+.calendar-expanded
+  overflow: hidden
