@@ -4,7 +4,7 @@
     flex-direction: column
     font-family: Gilroy
     z-index: 9999
-    box-shadow: 0 0 3px rgba(0, 0, 0, 0.1), 0 2px 3px rgba(0, 0, 0, 0.15)
+    box-shadow: 0 0 3px rgba(0, 0, 0, 0.2), 0 2px 3px rgba(0, 0, 0, 0.5)
 
     &.center-align
       .travel-calendar__input-container
@@ -35,8 +35,9 @@
       position: absolute
       visibility: hidden
       opacity: 0
+      left: -9999px
       right: auto
-      top: auto
+      top: 100%
       transition: opacity 0.15s linear
 
       &-days-of-week
@@ -100,21 +101,79 @@
       width: 100%
       border-bottom: 1px solid #eee
 
+      label
+        padding-left: 10px
+
       @media (max-width: 1024px)
         background: #0088DC
+
+        label
+          display: none
+
+    &__error
+        width: 100%
+        margin: 0
+        color: #f23d4e
+        text-align: center
+
+        @media (max-width: 1024px)
+          position: absolute
+          bottom: 39px
+          left: 0
+          right: 0
+          font-size: 14px
+          background: #fff
+          padding: 5px 0
+          z-index: 2
+
+    &__duration-text-container
+      @media(max-width: 1024px)
+        display: none
 
     &__footer
       width: 100%
       border-top: 1px solid #eee
       justify-content: flex-end
       display: flex
-      padding: 10px 20px
+      padding: 8px 20px
+      flex-wrap: wrap
 
+      .legend
+        flex-grow: 1
+
+        @media (max-width: 1024px)
+          display: none
+
+        &-sold-out,&-available,&-no-info 
+          position: relative
+          margin-bottom: 5px
+          
+          &:before 
+            content: ''
+            display: inline-block
+            vertical-align: middle
+            margin-right: 5px
+            width: 15px
+            height: 15px
+            background: rgba(255, 0, 0, 0.3)
+            border: 1px solid rgba(255, 0, 0, 0.7)
+                  
+        
+        &-available:before 
+          background: rgba(165, 236, 182, 0.2)
+          border: 1px solid rgba(165, 236, 182, 0.8)
+        
+        &-no-info::before 
+          background: #e1e7e9
+          border: 1px solid #abaaaa;
+        
     &__btn
       line-height: 32px
       padding: 0 15px
       min-width: 100px
       margin-left: 20px
+      max-height: 32px
+      align-self: center
 
     &__arrow
       position: absolute
@@ -123,12 +182,14 @@
       transform: translateY(-50%)
       height: 40px
       width: 40px
-      background-color: #fff
+      background-color: #fafafa
+      color: #000
       border-radius: 100%
-      box-shadow: 0 0 3px rgba(0, 0, 0, 0.1), 0 2px 3px rgba(0, 0, 0, 0.15)
+      box-shadow: 0 0 3px rgba(0, 0, 0, 0.2), 0 2px 3px rgba(0, 0, 0, 0.5)
       font-size: 30px
       text-align: center
       cursor: pointer
+      user-select: none
       @media (max-width: 1024px)
         display: none
 
@@ -217,7 +278,6 @@
               background: #fff
               color: #000
             span
-              background: #fff
               &:before
                 content: ''
                 position: absolute
@@ -280,12 +340,13 @@
             background: linear-gradient(to left, #fff, #e8f0fe)
         
         &.available
-          background: rgba(0, 128, 0, 0.27)
+          background: rgba(165, 236, 182, 0.2)
 
           &.utmost
-            background: rgba(0, 128, 0, 0.27)
+            background: rgba(165, 236, 182, 0.2)
 
           &.selected
+            background: #e8f0fe
             font-weight: bold
             color: #008200
 
@@ -296,16 +357,18 @@
             background: rgba(255, 0, 0, 0.3)
 
           &.selected
+            background: #e8f0fe
             font-weight: bold
             color: #f23d4e
 
         &.no-info
-          background: #B6B8B9
+          background: #e1e7e9
           
           &.utmost
-            background: #B6B8B9
+            background: #e1e7e9
 
           &.selected
+            background: #e8f0fe
             font-weight: bold
 
         
@@ -313,6 +376,7 @@
     .month-name
       margin-top: 20px
       margin-bottom: 0
+      text-transform: capitalize
 
       @media (min-width: 1025px)
         text-align: center

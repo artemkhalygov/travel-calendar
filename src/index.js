@@ -1,7 +1,7 @@
 import moment from 'moment'
 import each from 'lodash/each'
 import map from 'lodash/map'
-import debounce from 'lodash/debounce'
+
 import './calendar.sass'
 
 const enumerateDaysBetweenDates = function(startDate, endDate) {
@@ -15,22 +15,45 @@ const enumerateDaysBetweenDates = function(startDate, endDate) {
 	return dates;
 }
 
-const getOffsetRect = function(elem) {
-    let box = elem.getBoundingClientRect(),
-     	body = document.body,
-     	docElem = document.documentElement,
-     	scrollTop = window.pageYOffset || docElem.scrollTop || body.scrollTop,
-     	scrollLeft = window.pageXOffset || docElem.scrollLeft || body.scrollLeft,
-     	clientTop = docElem.clientTop || body.clientTop || 0,
-     	clientLeft = docElem.clientLeft || body.clientLeft || 0,
-     	top  = box.top +  scrollTop - clientTop,
-     	left = box.left + scrollLeft - clientLeft
+const elementInViewport = function (el) {
+  var top = el.offsetTop;
+  var left = el.offsetLeft;
+  var width = el.offsetWidth;
+  var height = el.offsetHeight;
 
-    return { top: Math.round(top), left: Math.round(left) }
+  while(el.offsetParent) {
+    el = el.offsetParent;
+    top += el.offsetTop;
+    left += el.offsetLeft;
+  }
+
+  return (
+    top >= window.pageYOffset &&
+    left >= window.pageXOffset &&
+    (top + height) <= (window.pageYOffset + window.innerHeight) &&
+    (left + width) <= (window.pageXOffset + window.innerWidth)
+  )
+}
+
+const getOffsetRect = function(elem) {
+	let box = elem.getBoundingClientRect(),
+		body = document.body,
+		docElem = document.documentElement,
+		scrollTop = window.pageYOffset || docElem.scrollTop || body.scrollTop,
+		scrollLeft = window.pageXOffset || docElem.scrollLeft || body.scrollLeft,
+		clientTop = docElem.clientTop || body.clientTop || 0,
+		clientLeft = docElem.clientLeft || body.clientLeft || 0,
+		top = box.top + scrollTop - clientTop,
+		left = box.left + scrollLeft - clientLeft
+
+	return {
+		top: Math.round(top),
+		left: Math.round(left)
+	}
 }
 
 const getRandomInt = (min, max) => {
-  return Math.floor(Math.random() * (max - min)) + min;
+	return Math.floor(Math.random() * (max - min)) + min;
 }
 
 
@@ -41,50 +64,79 @@ class TravelCalendar {
 		startOfWeek = 1,
 		dateFrom,
 		dateTo,
+		dateToInputId,
 		rangePicker,
 		onSelectDates,
 		onMonthChange,
-		availableDates
+		availableDates,
+		showLegend,
+		language,
+		dateFromLabel,
+		dateToLabel,
+		minDuration,
+		maxDuration,
+		showDuration
 	}) {
 		this.element = element
+
+		if (dateToInputId) {
+			this.elementTo = document.getElementById(dateToInputId)
+		}
+
 		this.monthNumber = monthNumber
 		this.calendarId = getRandomInt(1000000, 9999999999)
-		this.userLocale = (navigator.languages && navigator.languages.length) ? navigator.languages[0] : navigator.language || navigator.browserLanguage || 'en'
+		this.userLocale = language || this.userLocale
 		this.isVisible = false
 
 		this.dateFrom = dateFrom ? moment(dateFrom) : null
 		this.dateTo = rangePicker && dateTo ? moment(dateTo) : null
 
+		this.dateFromLabel = dateFromLabel || 'From'
+		this.dateToLabel = dateToLabel || 'To'
+
+		this.minDuration = minDuration || 0
+		this.maxDuration = maxDuration || 21
+
+		this.showLegend = showLegend
+		this.showDuration = showDuration
+
 		this.rangePicker = rangePicker
 		this.availableDates = availableDates
 		this.onMonthChange = onMonthChange
 		this.horizontalScrollPosition = 0
+		this.isTouch = 'ontouchstart' in window
+		this.hasError = false
 
 		moment.locale(this.userLocale)
 
 		this.calendarContainer = document.getElementById(`travel-calendar-${this.calendarId}`)
+		this.onSelectDates = onSelectDates
 
-		if (typeof onSelectDates === 'function') {
-			this.onSelectDates = onSelectDates
-		}
-
-		if ('ontouchstart' in window) {
-			this.element.setAttribute('readonly', 'true')
-		}
-		
 		this.renderCalendar()
 
 		if (this.element) {
-			this.element.value = this.dateFrom ? this.dateFrom.locale(this.userLocale).format('L') : ''
+			this.element.value = this.dateFrom ? this.dateFrom.locale(this.userLocale).format('DD MMM YYYY') : ''
 			this.element.addEventListener('click', this.show.bind(this))
+
+			
+			if (this.isTouch) {
+				this.element.setAttribute('readonly', 'true')
+
+				if (this.elementTo) {
+					this.elementTo.setAttribute('readonly', 'true')
+				}
+			}
 		}
 
+		if (this.elementTo) {
+			this.elementTo.value = this.dateTo ? this.dateTo.locale(this.userLocale).format('DD MMM YYYY') : ''
+			this.elementTo.addEventListener('click', this.show.bind(this))
+		}
 	}
 
 	show() {
 		const calendar = document.getElementById(`travel-calendar-${this.calendarId}`)
 		const position = getOffsetRect(this.element)
-
 
 		if (window.innerWidth > 1024) {
 			if (position.left + calendar.clientWidth >= window.innerWidth) {
@@ -101,47 +153,29 @@ class TravelCalendar {
 
 				position.left = positionLeft
 			} else {
-				calendar.classList.remove('right-align','center-align')
+				calendar.classList.remove('right-align', 'center-align')
 			}
 
 			calendar.style.top = position.top + document.body.scrollTop - 8 + 'px'
 			calendar.style.left = position.left + document.body.scrollLeft - 10 + 'px'
+
+			if (elementInViewport(this.saveBtn) === false) {
+				window.scrollTo({
+				  top: position.top - 100,
+				  behavior: 'smooth',
+				})
+			}
 		} else {
 			document.body.classList.add('calendar-expanded')
-			calendar.classList.remove('right-align','center-align')
+			calendar.classList.remove('right-align', 'center-align')
 		}
-		
+
 		calendar.classList.add('visible')
-		
+
 
 		setTimeout(() => {
 			this.isVisible = true
-
-			if (this.dateFrom || this.dateTo) {
-				let selectedDate = document.querySelector(`#travel-calendar-${this.calendarId} .utmost`)
-				const arrowLeft = document.getElementById(`travel-calendar-arrow-left-${this.calendarId}`)
-				const arrowRight = document.getElementById(`travel-calendar-arrow-right-${this.calendarId}`)
-
-				if (!selectedDate) {
-					return false
-				}
-
-				if (window.innerWidth <= 1024) {
-					document.getElementById(`calendar-monthes-wrapper-${this.calendarId}`).scrollTop = selectedDate.parentElement.parentElement.offsetTop - 70
-				} else {
-					this.horizontalScrollPosition = Math.abs(moment().diff(moment(selectedDate.dataset.date).endOf('month'),'M')) - 1
-
-					if (this.horizontalScrollPosition >= 0) {
-						document.getElementById(`travel-calendar-arrow-right-${this.calendarId}`).click()
-						arrowLeft.classList.remove('disabled')
-					} else {
-						this.horizontalScrollPosition = 0
-						arrowLeft.classList.add('disabled')
-						arrowRight.classList.remove('disabled')
-						document.getElementById('travel-monthes').style.transform = 'translate3d(0px, 0px, 0px)'
-					}
-				}
-			}
+			this.scrollToDate()
 		}, 150)
 	}
 
@@ -160,53 +194,57 @@ class TravelCalendar {
 	}
 
 	renderCalendar() {
-		if (!this.calendarContainer) {
-			let i = 0;
-			let monthes = [];
-			let groupedMonthes = [];
-			const startDay = moment().startOf('month');
-			// const endDay = moment().add(24,'m').endOf('month');
+			if (!this.calendarContainer) {
+				let i = 0;
+				let monthes = [];
+				let groupedMonthes = [];
+				const startDay = moment().startOf('month');
+				// const endDay = moment().add(24,'m').endOf('month');
 
-			while (this.monthNumber > i) {
-				let month = moment(startDay).add(i, 'M')
-				let startOfMonth = moment(month).startOf('month')
-				let endOfMonth = moment(month).endOf('month')
-				let group = enumerateDaysBetweenDates(startOfMonth, endOfMonth).reduce(function(acc, date) {
-					var yearWeek = moment(date).year() + '-' + moment(date).isoWeek();
-					// check if the week number exists
-					if (typeof acc[yearWeek] === 'undefined') {
-						acc[yearWeek] = [];
-					}
+				while (this.monthNumber > i) {
+					let month = moment(startDay).add(i, 'M')
+					let startOfMonth = moment(month).startOf('month')
+					let endOfMonth = moment(month).endOf('month')
+					let group = enumerateDaysBetweenDates(startOfMonth, endOfMonth).reduce(function(acc, date) {
+						var yearWeek = moment(date).year() + '-' + moment(date).isoWeek();
+						// check if the week number exists
+						if (typeof acc[yearWeek] === 'undefined') {
+							acc[yearWeek] = [];
+						}
 
-					acc[yearWeek].push(date);
+						acc[yearWeek].push(date);
 
-					return acc;
+						return acc;
 
-				}, {});
+					}, {});
 
-				groupedMonthes.push(group)
+					groupedMonthes.push(group)
 
-				i++;
-			}
+					i++;
+				}
 
-			let template = `<div class="travel-calendar" id="travel-calendar-${this.calendarId}">
+				let listOfWeekDays = moment.weekdaysMin(true)
+
+				let template = `
 				<div class="travel-calendar__container" id="travel-calendar-container-${this.calendarId}">
 					<div class="travel-calendar__arrow arrow-right" id="travel-calendar-arrow-right-${this.calendarId}">&#8250;</div>
 					<div class="travel-calendar__arrow arrow-left" id="travel-calendar-arrow-left-${this.calendarId}">&#8249;</div>
 					<div class="travel-calendar__header">
 						<div class="travel-calendar__input-container">
-							<input class="travel-calendar__input" placeholder="Date from" readonly="true" id="travelFrom-${this.calendarId}">
-							${ this.rangePicker ? `<input class="travel-calendar__input" placeholder="Date to" readonly="true" id="travelTo-${this.calendarId}">` : '' }
+							<label>${ this.dateFromLabel }</label>
+							<input class="travel-calendar__input" placeholder="${ this.dateFromLabel }" autocomplete="false" ${this.isTouch ? 'readonly="true"' : ''} id="travelFrom-${this.calendarId}">
+							${ this.rangePicker ? `
+								<label>${ this.dateToLabel }</label>
+								<input class="travel-calendar__input" autocomplete="false" placeholder="${ this.dateToLabel }" ${this.isTouch ? 'readonly="true"' : ''} id="travelTo-${this.calendarId}">` : '' }
+							${ this.showDuration  ? `<span class="travel-calendar__duration-text-container" id="travel-duration-${this.calendarId}"></span>` : '' }
 						</div>
 						<div class="travel-calendar-days-of-week">
-							<div class="travel-calendar-week">
-								<div class="travel-calendar-day">Mon</div>
-								<div class="travel-calendar-day">Tue</div>
-								<div class="travel-calendar-day">Wed</div>
-								<div class="travel-calendar-day">Thu</div>
-								<div class="travel-calendar-day">Fri</div>
-								<div class="travel-calendar-day">Sat</div>
-								<div class="travel-calendar-day">Sun</div>
+							<div class="travel-calendar-week">`
+							each(listOfWeekDays, (val) => {
+								template += `<div class="travel-calendar-day">${ val.toLocaleUpperCase() }</div>`
+							})
+		
+							template += `
 							</div>
 						</div>
 					</div>
@@ -216,16 +254,14 @@ class TravelCalendar {
 			each(map(groupedMonthes), (month, key) => {
 				let currentMonth = moment(map(month)[0][0])
 				template += `<div class="travel-calendar-month">
-					<p class="month-name">${ currentMonth.locale('en').format('MMMM') } ${ currentMonth.format('YYYY') !== moment().format('YYYY') ? currentMonth.format('YYYY') : ''}</p>
-					<div class="travel-calendar-week week-days">
-						<div class="travel-calendar-day">M</div>
-						<div class="travel-calendar-day">T</div>
-						<div class="travel-calendar-day">W</div>
-						<div class="travel-calendar-day">T</div>
-						<div class="travel-calendar-day">F</div>
-						<div class="travel-calendar-day">S</div>
-						<div class="travel-calendar-day">S</div>
-					</div>`
+					<p class="month-name">${ currentMonth.format('MMMM') } ${ currentMonth.format('YYYY') !== moment().format('YYYY') ? currentMonth.format('YYYY') : ''}</p>
+					<div class="travel-calendar-week week-days">`
+
+					each(listOfWeekDays, (val) => {
+						template += `<div class="travel-calendar-day">${ val.substr(0,1).toLocaleUpperCase() }</div>`
+					})
+
+					template += '</div>'
 
 				each(month, (week) => {
 					template += '<div class="travel-calendar-week">'
@@ -277,29 +313,48 @@ class TravelCalendar {
 			})
 
 			template += `</div></div>
-				<div class="travel-calendar__footer">
-					<button class="travel-calendar__btn grey-btn" id="cancel-btn-${this.calendarId}">Clear</button>
+				<div class="travel-calendar__error">
+					<p id="calendar-error-${this.calendarId}"></p>
+				</div>
+				<div class="travel-calendar__footer">`
+				if (this.showLegend) {
+					template += `<div class="legend" fixed-position-tooltip="fixed-position-tooltip" child=".legend-available .info-icon">
+						<div class="legend-available">Room available</div>
+						<div class="legend-sold-out">Room sold-out</div>
+						<div class="legend-no-info">No prices &amp; availability</div>
+					</div>`
+				}
+					
+				template += `<button class="travel-calendar__btn grey-btn" id="cancel-btn-${this.calendarId}">Clear</button>
 					<button class="travel-calendar__btn blue-btn" id="save-btn-${this.calendarId}">Select</button>
 				</div>
-			  </div>
-			</div>`
+			  </div>`
 
 			const elem = document.createElement('div')
 
-			elem.setAttribute('id', 'calendar')
+			elem.setAttribute('id', `travel-calendar-${this.calendarId}`)
+			elem.setAttribute('class', 'travel-calendar')
 			elem.innerHTML = template
 
 			document.body.appendChild(elem)
 
-			document.addEventListener('click', (e) => {
+			document.addEventListener('mousedown', (e) => {
 				if (!elem.contains(e.target) && this.isVisible) {
 					this.saveDates()
 				}
 			})
 
+			this.calendarError = document.getElementById(`calendar-error-${this.calendarId}`)
+
+			if (this.showDuration) {
+				this.durationText = document.getElementById(`travel-duration-${this.calendarId}`)
+			}
+
 			document.getElementById(`cancel-btn-${this.calendarId}`).addEventListener('click', this.clearDates.bind(this));
 
-			document.getElementById(`save-btn-${this.calendarId}`).addEventListener('click', this.saveDates.bind(this));
+			this.saveBtn = document.getElementById(`save-btn-${this.calendarId}`)
+			
+			this.saveBtn.addEventListener('click', this.saveDates.bind(this));
 
 			const travelMonthes = document.getElementById(`travel-monthes-${this.calendarId}`)
 			const CONTAINER_WIDTH = 360
@@ -359,30 +414,120 @@ class TravelCalendar {
 				}
 			})
 
-			if (window.innerWidth <= 1024) {
-				const calendarMonthWrapper = document.getElementById(`calendar-monthes-wrapper-${this.calendarId}`)
+			// if (window.innerWidth <= 1024) {
+			// 	const calendarMonthWrapper = document.getElementById(`calendar-monthes-wrapper-${this.calendarId}`)
 
-				calendarMonthWrapper.addEventListener('scroll', (e) => {
-					debounce(() => {
-						console.log(e.target.scrollTop, calendarMonthWrapper.clientHeight)
-					}, 150)
-				})
+			// 	calendarMonthWrapper.addEventListener('scroll', (e) => {
+			// 		debounce(() => {
+			// 			console.log(e.target.scrollTop, calendarMonthWrapper.clientHeight)
+			// 		}, 150)
+			// 	})
+			// }
+
+			this.allDatesHTML = document.querySelectorAll(`#travel-calendar-${this.calendarId} .travel-calendar-day.clickable`)
+			this.dateFromInput = document.getElementById(`travelFrom-${this.calendarId}`)
+			this.dateToInput = document.getElementById(`travelTo-${this.calendarId}`)
+
+			each(this.allDatesHTML, (elem) => {
+				return elem.addEventListener('click', (e) => { this.clickEvent(elem.dataset.date) });
+			})
+
+			if (this.isTouch === false) {
+				this.dateFromInput.onchange = (e) => {
+					let isValid = false
+					
+					if (this.dateFromInput.value) {
+						let date = moment(this.dateFromInput.value)
+
+						if (!date._isValid) {
+							date = moment(this.dateFromInput.value, moment.localeData()._longDateFormat.L)
+						}
+						
+						if (date._isValid && date >= moment() && date <= moment().add(this.monthNumber,'M')) {
+							this.dateFrom = date
+							isValid = true
+
+							if (this.dateTo && date >= this.dateTo) {
+								this.dateTo = null
+								this.dateToInput.value = null
+							}
+						}
+					}
+
+					if (isValid) {
+						this.highlightSelectedDate()
+						this.scrollToDate()
+					} else {
+						this.dateFromInput.value = this.dateFrom ? this.dateFrom.locale(this.userLocale).format('DD MMM YYYY') : null
+					}
+				}
+
+				if (this.dateToInput) {
+					this.dateToInput.onchange = (e) => {
+						let isValid = false
+
+						if (this.dateToInput.value) {
+							let date = moment(this.dateToInput.value)
+
+							if (!date._isValid) {
+								date = moment(this.dateToInput.value, moment.localeData()._longDateFormat.L)
+							}
+							
+							if (date._isValid && date >= moment() && date <= moment().add(this.monthNumber,'M')) {
+								this.dateTo = date
+								isValid = true
+
+								if (this.dateFrom && date <= this.dateFrom) {
+									this.dateTo = null
+								}
+							}
+						}
+
+
+						if (isValid) {
+							this.highlightSelectedDate()
+							this.scrollToDate()
+						} else {
+							this.dateToInput.value = this.dateTo ? this.dateTo.locale(this.userLocale).format('DD MMM YYYY') : null
+						}
+					}
+				}
 			}
 		}
-
-		this.allDatesHTML = document.querySelectorAll(`#travel-calendar-${this.calendarId} .travel-calendar-day.clickable`)
-		this.dateFromInput = document.getElementById(`travelFrom-${this.calendarId}`)
-		this.dateToInput = document.getElementById(`travelTo-${this.calendarId}`)
-
-		each(this.allDatesHTML, (elem) => {
-			return elem.addEventListener('click', (e) => { this.clickEvent(elem.dataset.date) });
-		})
 		
 
 		if (this.dateFrom || this.dateTo) {
 			this.highlightSelectedDate()
 		}
 
+	}
+
+	scrollToDate() {
+		if (this.dateFrom || this.dateTo) {
+			let selectedDate = document.querySelector(`#travel-calendar-${this.calendarId} .utmost`)
+			const arrowLeft = document.getElementById(`travel-calendar-arrow-left-${this.calendarId}`)
+			const arrowRight = document.getElementById(`travel-calendar-arrow-right-${this.calendarId}`)
+
+			if (!selectedDate) {
+				return false
+			}
+
+			if (window.innerWidth <= 1024) {
+				document.getElementById(`calendar-monthes-wrapper-${this.calendarId}`).scrollTop = selectedDate.parentElement.parentElement.offsetTop - 80
+			} else {
+				this.horizontalScrollPosition = Math.abs(moment().diff(moment(selectedDate.dataset.date).endOf('month'),'M')) - 1
+
+				if (this.horizontalScrollPosition >= 0) {
+					document.getElementById(`travel-calendar-arrow-right-${this.calendarId}`).click()
+					arrowLeft.classList.remove('disabled')
+				} else {
+					this.horizontalScrollPosition = 0
+					arrowLeft.classList.add('disabled')
+					arrowRight.classList.remove('disabled')
+					document.getElementById(`travel-monthes-${this.calendarId}`).style.transform = 'translate3d(0px, 0px, 0px)'
+				}
+			}
+		}
 	}
 
 	clearDates() {
@@ -393,21 +538,22 @@ class TravelCalendar {
 	}
 
 	saveDates() {
-		if (this.onSelectDates) {
-			let selectedDates = {
-				dateFrom: this.dateFrom ? this.dateFrom.format('YYYY-MM-DD') : null,
-				dateFromFormatted: this.dateFrom ? this.dateFrom.format('L') : null
-			}
-
-			if (this.rangePicker) {
-				selectedDates.dateTo = this.dateTo ? this.dateTo.format('YYYY-MM-DD') : null
-				selectedDates.dateToFormatted = this.dateTo ? this.dateFrom.format('L') : null
-			}
-
-			this.onSelectDates(selectedDates)
-			this.hide()
+		let selectedDates = {
+			dateFrom: this.dateFrom ? this.dateFrom.locale(this.userLocale).format('YYYY-MM-DD') : null,
+			dateFromFormatted: this.dateFrom ? this.dateFrom.locale(this.userLocale).format('DD MMM YYYY') : null
 		}
+
+		if (this.rangePicker) {
+			selectedDates.dateTo = this.dateTo && !this.hasError ? this.dateTo.locale(this.userLocale).format('YYYY-MM-DD') : null
+			selectedDates.dateToFormatted = this.dateTo && !this.hasError ? this.dateTo.locale(this.userLocale).format('DD MMM YYYY') : null
+		}
+
+		if (this.onSelectDates) {
+			this.onSelectDates(selectedDates)
+		}
+		this.hide()
 	}
+
 
 	clickEvent(datasetDate) {
 		if (!datasetDate) {
@@ -421,6 +567,27 @@ class TravelCalendar {
 		} else if (this.rangePicker) {
 			if (this.dateFrom && !this.dateTo) {
 				if (this.dateFrom < date) {
+					if (this.minDuration || this.maxDuration) {
+						let diff = date.diff(this.dateFrom,'d')
+						if (this.maxDuration >= diff && this.minDuration <= diff) {
+							this.saveBtn.removeAttribute('disabled')
+							this.calendarError.innerHTML = ''
+							this.hasError = false
+
+							if (this.showDuration) {
+								this.durationText.innerHTML = `${ diff } nights`
+							}
+						} else {
+							this.saveBtn.setAttribute('disabled', 'true')
+							this.hasError = true
+							this.calendarError.innerHTML = `Minimal duration ${this.minDuration} days. Maximum duration ${this.maxDuration} days.`
+
+							if (this.showDuration) {
+								this.durationText.innerHTML = ''
+							}
+						}
+					}
+
 					this.dateTo = date
 				} else {
 					this.dateFrom = date
@@ -436,6 +603,10 @@ class TravelCalendar {
 		this.highlightSelectedDate()
 	}
 
+	updateDurationText(text) {
+		this.durationText.innerHTML = text
+	}
+
 	highlightSelectedDate() {
 		let dateFromFormatted = this.dateFrom ? this.dateFrom.format('YYYY-MM-DD') : null,
 			dateToFormatted = this.dateTo && this.dateTo.format('YYYY-MM-DD')
@@ -443,6 +614,8 @@ class TravelCalendar {
 		each(this.allDatesHTML, (val) => {
 			let currentValue = val.dataset.date,
 				momentDate = moment(currentValue)
+
+			val.classList.remove('selected','utmost', 'utmost-right', 'utmost-left')
 
 			if (dateFromFormatted && currentValue === dateFromFormatted) {
 				val.classList.add('selected', 'utmost')
@@ -458,15 +631,13 @@ class TravelCalendar {
 				}
 			} else if (this.dateFrom && this.dateTo && momentDate.isBetween(this.dateFrom, this.dateTo, 'days')) {
 				val.classList.add('selected')
-			} else {
-				val.classList.remove('selected','utmost', 'utmost-right', 'utmost-left')
 			}
 		});
 
-		this.dateFromInput.value = this.dateFrom ? this.dateFrom.format('L') : ''
+		this.dateFromInput.value = this.dateFrom ? this.dateFrom.locale(this.userLocale).format('DD MMM YYYY') : ''
 
 		if (this.rangePicker) {
-			this.dateToInput.value = this.dateTo ? this.dateTo.format('L') : ''
+			this.dateToInput.value = this.dateTo && !this.hasError ? this.dateTo.locale(this.userLocale).format('DD MMM YYYY') : ''
 		}
 	}
 
@@ -513,19 +684,25 @@ class TravelCalendar {
 // },{
 // 	date: '2018-10-03',
 // 	isAvailable: null
-// }]
+// // }]
 
 // var calendar = new TravelCalendar({
 // 	element: document.getElementById('dateFrom'),
-// 	dateFrom: '2019-09-14',
+// 	dateToInputId: 'dateTo',
+// 	dateTo: '',
 // 	monthNumber: 24,
 // 	onSelectDates: function(dates) { 
-// 		document.getElementById('dateFrom').value = dates.dateFrom
-// 		document.getElementById('dateTo').value = dates.dateTo
+// 		// document.getElementById('dateFrom').value = dates.dateFrom
+// 		// document.getElementById('dateTo').value = dates.dateTo
 // 	},
 // 	// availableDates,
 // 	onMonthChange: function() {console.log(1)},
-// 	rangePicker: false
+// 	rangePicker: true,
+// 	language: 'en',
+// 	minDuration: 3,
+// 	maxDuration: 21,
+// 	showLegend: true,
+// 	showDuration: true
 // })
 
 // var calendar2 = new TravelCalendar({
@@ -545,4 +722,3 @@ window.TravelCalendar = TravelCalendar
 
 
 // document.getElementById('dateFrom').addEventListener('click', calendar.show.bind(calendar))
-
