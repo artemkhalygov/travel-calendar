@@ -26,10 +26,17 @@
       transition: transform 0.3s linear
 
     @media (min-width: 768px) and (max-width: 1024px)
-      background: rgba(60, 60, 60, 0.8)
       display: none
       justify-content: center
       align-items: center
+
+      .travel-calendar__backdrop
+        background: rgba(60, 60, 60, 0.8)
+        position: absolute
+        right: 0
+        top: 0
+        left: 0
+        bottom: 0
 
     @media (min-width: 1025px)
       position: absolute
@@ -69,6 +76,7 @@
         left: 40px
         bottom: auto
         right: auto
+          
 
     &__input
       height: 40px
@@ -99,9 +107,11 @@
 
     &__header
       width: 100%
+      min-height: 11%
       border-bottom: 1px solid #eee
 
       label
+        align-self: center
         padding-left: 10px
 
       @media (max-width: 1024px)
@@ -110,21 +120,59 @@
         label
           display: none
 
-    &__error
-        width: 100%
-        margin: 0
-        color: #f23d4e
-        text-align: center
+    &__input-container
+      @media (max-width: 1024px)
+        display: flex
 
-        @media (max-width: 1024px)
-          position: absolute
-          bottom: 39px
-          left: 0
-          right: 0
-          font-size: 14px
-          background: #fff
-          padding: 5px 0
-          z-index: 2
+        input
+          width: 48%
+          margin: 3px 2%
+
+    &__error
+      width: 100%
+      margin: 5px 0
+      color: #f23d4e
+      justify-content: center
+      text-align: center
+      display: none
+
+      &.active
+        display: flex
+
+      p
+        border-radius: 3px
+        border: solid 1px #fbd0d4
+        background-color: #fef1f2
+        padding: 3px 15px
+        color: #91081f
+        margin: 0
+        
+        &:before 
+          content: '\e946'
+          font-family: 'icomoon'
+          vertical-align: middle
+          padding-right: 5px
+
+      @media (max-width: 1024px)
+        position: absolute
+        bottom: 59px
+        left: 0
+        right: 0
+        font-size: 14px
+        background: #fff
+        padding: 5px 0
+        z-index: 2
+
+    &__error.active + &__hint 
+      display: none
+      
+    &__hint
+      width: 100%
+      margin-top: 5px
+      text-align: center
+
+      p
+        margin: 0
 
     &__duration-text-container
       @media(max-width: 1024px)
@@ -135,16 +183,40 @@
       border-top: 1px solid #eee
       justify-content: flex-end
       display: flex
+      max-height: 17%
       padding: 8px 20px
       flex-wrap: wrap
 
       .legend
+        display: flex
+        flex-direction: row
         flex-grow: 1
+
+        .fixed-legend-container
+          margin-left: 20%
 
         @media (max-width: 1024px)
           display: none
 
-        &-sold-out,&-available,&-no-info 
+        &-start-date, &-end-date
+          margin-bottom: 5px
+
+          &:before
+            content: ''
+            display: inline-block
+            vertical-align: middle
+            margin-right: 5px
+            width: 15px
+            height: 15px
+            border: 1px solid #00dc1b
+            border-radius: 100%
+            margin-top: -2px
+
+        &-end-date:before
+          border-color: #0024d7
+
+
+        &-sold-out,&-available,&-no-info
           position: relative
           margin-bottom: 5px
           
@@ -165,7 +237,7 @@
         
         &-no-info::before 
           background: #e1e7e9
-          border: 1px solid #abaaaa;
+          border: 1px solid #abaaaa
         
     &__btn
       line-height: 32px
@@ -174,6 +246,19 @@
       margin-left: 20px
       max-height: 32px
       align-self: center
+
+      &.close-btn
+        border-bottom: 1px solid #0088DC
+        padding: 0
+        line-height: 1
+        text-align: center
+        min-width: auto
+        color: #0088DC
+
+      @media (max-width: 1024px)
+        margin-left: 10px
+        &.close-btn
+          margin-left: 0
 
     &__arrow
       position: absolute
@@ -195,6 +280,7 @@
 
       &.disabled
         cursor: not-available
+        pointer-events: none
         background: #f7f7f7
         color: #bbb
 
@@ -228,11 +314,17 @@
       display: flex
       flex-grow: 1
       width: 100%
-      height: 70%
+      height: 65%
       flex-wrap: wrap
       overflow-y: auto
       overflow-x: hidden
       scroll-behavior: smooth
+
+      &.highlight-range
+        .travel-calendar-day:not(.possible-range-date)
+          cursor: not-allowed
+          pointer-events: none
+          opacity: 0.35
 
       @media (min-width: 1025px)
         display: block
@@ -371,6 +463,37 @@
             background: #e8f0fe
             font-weight: bold
 
+        &.dow-available
+          span
+            &:before
+              content: ''
+              position: absolute
+              border-radius: 100%
+              border: 1px solid #00dc1b
+              bottom: 0
+              left: 0
+              height: initial
+              right: 0
+              top: 0
+              transform: scale(1)
+              width: initial
+
+        &.possible-range-date
+          background: rgba(165, 236, 182, 0.2)
+          span
+            &:before
+              content: ''
+              position: absolute
+              border-radius: 100%
+              border: 1px solid #0024d7
+              background: rgba(19, 56, 239, 0.12)
+              bottom: 0
+              left: 0
+              height: initial
+              right: 0
+              top: 0
+              transform: scale(1)
+              width: initial
         
     
     .month-name
@@ -385,3 +508,10 @@
 
 .calendar-expanded
   overflow: hidden
+  position: relative
+  height: 100%
+
+  body
+    overflow: hidden
+    position: relative
+    height: 100%
